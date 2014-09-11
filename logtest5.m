@@ -21,7 +21,11 @@ function timeinsec = timeinseconds(datetime_as_string)
 	
 	%% implementation number one
 	[head, tail] = strtok(datetime_as_string,",");
+<<<<<<< HEAD
 	workstring = sprintf("%s.%s", head, tail(2:(length(tail) - 1)));
+=======
+	workstring = sprintf("%s.%s", head, tail(2:4));
+>>>>>>> 894602a1c46b66db7bfc5e237aeb2c3a736a09f8
 	
 	%%%% implementation number two (an alternative to implementation number one above)
 	%%%% left here intentionally for exploratory tests
