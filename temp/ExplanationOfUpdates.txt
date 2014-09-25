@@ -1,0 +1,4 @@
+File logtest5.m was updated to allow variable length
+
+
+

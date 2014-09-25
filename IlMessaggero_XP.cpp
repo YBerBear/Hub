@@ -14,15 +14,16 @@
 #include <stdio.h>
 #include <stdlib.h>            //????? can live without it
 #include <malloc.h>
-
-#include <iostream>
-
-#include <cstring>
-#include <ctime> 
+#include <ctime>
 
 #pragma comment(lib, "Ws2_32.lib")
 
-using namespace std;
+# define WEBHOSTIPADDR "10.18.52.180"
+# define WEBHOSTPORT "80"
+
+#define NUMOFITERATIONS 50
+
+#define DATASOURCEFILE "c:\\Documents and settings\\All Users\\Application Data\\Carl Zeiss Meditec\\Cirrus background processing service\\Logs\\Log.txt"
 
 #define PAYLOADBUFSIZE 512
 
@@ -46,24 +47,25 @@ int main(int argc, char **argv)
 	struct sockaddr_in conServAddr;
 	//char strToSend[17] = "GET / HTTP/1.0\n\n";              // this one works with basic html page provided with Apache 
 	//char strToSend[33] = "POST http://127.0.0.1:80/cgi-bin/getit.cgi HTTP/1.0\n\n";
-	//char strToSend[128] = "<FORM action=\"http://10.18.52.119/cgi-bin/getit_more.cgi?\" method=\"post\"></FORM>\n\n";
+	//char strToSend[128] = "<FORM action=\"http://10.18.52.128/cgi-bin/getit_more.cgi?\" method=\"post\"></FORM>\n\n";
 	char recvBuffer[32];
 	char timestamp[16];
 	char postbuf[PAYLOADBUFSIZE * 2];
 	u_long iMode;
 	
-	FILE * thesource, * debugfile;
+	FILE * thesource;
 	size_t size_read;
 	char  buf_read[PAYLOADBUFSIZE];  // previously: 64
 	char current_char;
-	
-	time_t time_now, time_reference;
 	int i;
-	
-	time(&time_reference);
-	
 
 	FreeConsole();
+	
+	//addition of November 27, 2013
+	char addrandport[18];
+	memset(addrandport,'\0',sizeof(addrandport));
+	sprintf(addrandport,"%s:%s",WEBHOSTIPADDR, WEBHOSTPORT);
+	//////////////////////////////////////////////////////////
 
 	// for debugging mostly
 	// printf ("This is a native C program.\n");
@@ -87,10 +89,9 @@ int main(int argc, char **argv)
 	}
 	
 	/////////// Loop introduced 04/01/2013 ////////////////////
-	for (i = 1; i <= 4; i++)
+	for (i = 1; i <= NUMOFITERATIONS; i++)                       // NUMOFITERATIONS added November 27, 2013
 	{
 		pause (20);
-	
 		closesocket(ConnectSocket);
 		ConnectSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);    //AF_UNSPEC
 		if (ConnectSocket == INVALID_SOCKET)
@@ -101,13 +102,15 @@ int main(int argc, char **argv)
 		
 		memset(&conServAddr, 0, sizeof(conServAddr));
 		conServAddr.sin_family      = AF_INET;
-		conServAddr.sin_addr.s_addr = inet_addr("10.18.52.119");
+		//conServAddr.sin_addr.s_addr = inet_addr("10.18.52.128");   // November 27,2013
+		conServAddr.sin_addr.s_addr = inet_addr(WEBHOSTIPADDR);
 		conServAddr.sin_port        = htons(80);
 		
 		iRes = connect(ConnectSocket, (struct sockaddr *)&conServAddr,sizeof(conServAddr));
 		if (iRes == SOCKET_ERROR) 
 		{
-				printf(" Third Socket Error, addr len: %d\n",strlen("10.18.52.119:80"));
+				//printf(" Third Socket Error, addr len: %d\n",strlen("10.18.52.128:80"));     // November 27,2013
+				printf(" Third Socket Error, addr len: %d\n",strlen(addrandport));
 				iError = WSAGetLastError();
 				printf(" The error: %d\n", iError);
 				if (iError == WSAEFAULT)
@@ -122,10 +125,11 @@ int main(int argc, char **argv)
 		memset(buf_read,'\0',sizeof(buf_read));
 
 		// thesource = fopen("c:\\eugene\\cpp\\EXAMPLE FOR UPLOAD.TXT","r");
-		thesource = fopen("c:\\temp\\prelim\\carrier10381.TXT","r");
+		//thesource = fopen("c:\\temp\\prelim\\carrier10381.TXT","r");
 		//thesource = fopen("c:\\Eugene\\testsofgnuplotandoctave\\logs\\Cirrus_log.txt","r");
 		
-		//thesource = fopen("c:\\ProgramData\\Carl Zeiss Meditec\\Cirrus background processing service\\Logs\\Log.txt","r");
+		 // thesource = fopen("c:\\ProgramData\\Carl Zeiss Meditec\\Cirrus background processing service\\Logs\\Log.txt","r");   //
+		 thesource = fopen(DATASOURCEFILE,"r");                                                                                  // December 2, 2013
 		//thesource = fopen("c:\\Documents and settings\\All Users\\Application Data\\Carl Zeiss Meditec\\Cirrus background processing service\\Logs\\Log.txt","r");
 		
 		iSentBufferCount = 1;
@@ -146,9 +150,6 @@ int main(int argc, char **argv)
 				
 				if (current_char == '\n') 
 				{
-					// for debugging mostly
-					// printf("\n New line: %x\n",current_char); 
-					
 					buf_read[iCharCount]=17;          // Decimal ASCII code for DC1
 									
 					//break;
@@ -160,15 +161,7 @@ int main(int argc, char **argv)
 				iCharCount++;
 			}
 			///////////////////////////
-			// for debugging mostly
-			// iDebugBufferCount++;
-			// debugfile = fopen("C:\\Eugene\\cpp\\Debugfile.txt","a");
-			// fprintf (debugfile,"\n %d %s",iDebugBufferCount,buf_read);
-			// fclose(debugfile);
-			///////////////////////////
-			
-			// sprintf(postbuf,"%s","POST 	/cgi-bin/conveyor.cgi?m=57&name=Eugene ");
-			//sprintf(postbuf,"%s%d%s%s%s","POST 	/cgi-bin/IlCorriere.cgi?idxBufferSent=",iSentBufferCount,"&startedAt=",timestamp," ");
+			//sprintf(postbuf,"%s","POST 	/cgi-bin/conveyor.cgi?m=57&name=Eugene ");
 			sprintf(postbuf,"%s%d%s%s","POST 	/cgi-bin/IlCorriere.cgi?idxBufferSent=",iSentBufferCount,"&startedAt=",timestamp);
 			if (current_char == EOF)
 			{
@@ -186,7 +179,7 @@ int main(int argc, char **argv)
 			sprintf(postbuf,"%s%s",postbuf,buf_read);
 			
 			// for debugging mostly
-			//printf("\n About To Be Send: \n %s \n",postbuf);  
+			// printf("\n About To Be Send: \n %s \n",postbuf);  
 			
 			/////
 			closesocket(ConnectSocket);
@@ -199,13 +192,15 @@ int main(int argc, char **argv)
 		
 			memset(&conServAddr, 0, sizeof(conServAddr));
 			conServAddr.sin_family      = AF_INET;
-			conServAddr.sin_addr.s_addr = inet_addr("10.18.52.119");
+			//conServAddr.sin_addr.s_addr = inet_addr("10.18.52.128");   //November 27, 2013
+			conServAddr.sin_addr.s_addr = inet_addr(WEBHOSTIPADDR);
 			conServAddr.sin_port        = htons(80);
 		
 			iRes = connect(ConnectSocket, (struct sockaddr *)&conServAddr,sizeof(conServAddr));
 			if (iRes == SOCKET_ERROR) 
 			{
-				printf(" Socket Error, addr len: %d\n",strlen("10.18.52.119:80"));
+				//printf(" Socket Error, addr len: %d\n",strlen("10.18.52.128:80")); //November 27, 2013
+				printf(" Socket Error, addr len: %d\n",strlen(addrandport));
 				iError = WSAGetLastError();
 				printf(" The error: %d\n", iError);
 				if (iError == WSAEFAULT)
@@ -240,7 +235,7 @@ int main(int argc, char **argv)
 				}
 				
 				// for debugging mostly
-				printf("%s",recvBuffer);
+				// printf("%s",recvBuffer);
 				
 				memset(recvBuffer,'\0',sizeof(recvBuffer));
 				iTotalBytesReceived += iBytesReceived;
@@ -263,12 +258,10 @@ int main(int argc, char **argv)
 		}while(current_char != EOF);
 		
 		fclose(thesource);
-		
+	
 	}///// End of loop introduced 04/01/20013 ////////////
-		
-		WSACleanup();
 	
-	
+	WSACleanup();
 	
 	return 0;
 	
